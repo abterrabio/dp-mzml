@@ -73,7 +73,7 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 	}
 
 	/**
-	 * Fastest loading of a RandomAccess parser with no indexing by scan time
+	 * Fastest loading of a parser with random access, but has no indexing by scan start time
 	 * 
 	 * @param xml  path to mzml file
 	 * @param factory method reference to a spectrum builder's constructor.

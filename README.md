@@ -18,7 +18,7 @@
   package, and corresponding builders for Spectrum and SpectrumHeader are found in com.digitalproteomics.parsers.mzml.builders.
   You can implement your own handlers by implementing MzMLStAXParser.FromXMLStreamBuilder<T>, which
   passes over each XMLStream event within a spectrum tag, and will build an object of your choosen type T.
- 
+
 ## Benchmarks
 
 Running a single thread on Ubuntu 16.04 system with an Intel(R) Core(TM) i7-5820K CPU @ 3.30GHz and 
@@ -54,6 +54,7 @@ The benchmarks were ran against jmzml 1.7.8, and pymzml 0.7.8 on the same deskto
 * Java 8
 * log4j2 
 * MSNumpress
+* Apache Commons CLI
 
 Note, these will be installed automatically if you are using Maven.  
 
@@ -64,13 +65,15 @@ To use this library, add the following to your pom.xml file.
 ```
 <dependency>
   <groupId>com.digitalproteomics</groupId>
-  <artifactId>mzmlparser</artifactId>
-  <version>1.0.0</version>
+  <artifactId>dp-mzml</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```
 
 ## License
+ Apache License 2.0 
+ 
 
-## Version
+Copyright 2017 Digital Proteomics, LLC
 
-## Authors
+
