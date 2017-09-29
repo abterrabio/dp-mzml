@@ -17,13 +17,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.digitalproteomics.oss.parsers.mzml.MzMLStAXParser;
-import com.digitalproteomics.oss.parsers.mzml.MzMLStAXParser.FromXMLStreamBuilder;
 
 /**
  * Captures only cvParam tags and its attributes and stores the elements in a byte array of a ReferenceableParamGroup
  *  within an mzML file. The params are pulled via a {@code XMLStreamReader} using {@code getParams()} method.
  */
-public class ReferenceableParamGroup implements MzMLStAXParser.FromXMLStreamBuilder<ReferenceableParamGroup> {
+public class ReferenceableParamGroup implements FromXMLStreamBuilder<ReferenceableParamGroup> {
 	
 	
 	public ReferenceableParamGroup(XMLStreamReader xr){

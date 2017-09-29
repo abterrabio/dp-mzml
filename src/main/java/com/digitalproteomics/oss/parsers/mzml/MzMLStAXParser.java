@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +29,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.digitalproteomics.oss.parsers.mzml.builders.FromXMLStreamBuilder;
 import com.digitalproteomics.oss.parsers.mzml.builders.ReferenceableParamGroup;
 import com.digitalproteomics.oss.parsers.mzml.builders.SpectrumIndexer;
 
@@ -37,21 +37,22 @@ import com.digitalproteomics.oss.parsers.mzml.builders.SpectrumIndexer;
  * A generic parser of an mzml file. The parser is an iterable over spectrum tags,
  * and can random access to a spectrum tag using the indexedMzML's index tags. 
  *
+ * If random access by scan time ranges is needed, then parseIndex and indexScanTimes must be flagged.
+ *
  * @param <T> an instance that can be built by a {@code FromXMLStreamBuilder}
  */
 public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 
-	
 	/** 
 	 * @param xml path to mzml file
 	 * @param factory method reference to a spectrum builder's constructor. 
-	 * @param parseIndex required for random access
+	 * @param parseIndex required for random access using reference id, or spectrum index (See {@code parseIndex()})
 	 * @param indexScanTimes scan times are indexed for random access
 	 */
 	public MzMLStAXParser(Path xml, 
 			FromXMLStreamBuilderFactory<T> factory,
 			boolean parseIndex,
-			boolean indexScanTimes){
+			boolean indexScanTimes) {
 		this.xml = xml;
 		this.factory = factory;
 		this.refParams = new HashMap<String, ReferenceableParamGroup>();
@@ -72,10 +73,12 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 	}
 
 	/**
-	 * @param xml
-	 * @param factory
+	 * Fastest loading of a RandomAccess parser with no indexing by scan time
+	 * 
+	 * @param xml  path to mzml file
+	 * @param factory method reference to a spectrum builder's constructor.
 	 */
-	public MzMLStAXParser(Path xml, FromXMLStreamBuilderFactory<T> factory){
+	public MzMLStAXParser(Path xml, FromXMLStreamBuilderFactory<T> factory) {
 		this(xml, factory, true, false);
 	}
 
@@ -87,7 +90,7 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 	}
 	
 	/** Used for debugging xml elements **/
-	static void printElementState(XMLStreamReader xr){
+	static void printElementState(XMLStreamReader xr) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("ElemState: ")
 			.append(xr.getEventType())
@@ -110,16 +113,6 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		System.out.println(sb.toString());
 	}
 	
-	/**
-	 * Accepts states of an xml stream, and builds instances from nested xml tags
-	 * 
-	 * @param <S> the type of object built
-	 */
-	public interface FromXMLStreamBuilder<S> extends Consumer<XMLStreamReader>{
-		/** Constructs an instance of type T after consuming xml states **/
-		S build();
-	}
-
 	/**
 	 * Factory for creating a xml stream handler that builds instances of a given type
 	 */
@@ -147,7 +140,7 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 				LOGGER.log(Level.ERROR, e.getMessage());
 				System.exit(-1);
 			}
-			if (!this.forwardToNextSpectrum()){
+			if (!this.moveToNextSpectrum()){
 				LOGGER.log(Level.WARN,  "no spectrum found in mzml file");
 			}
 		}
@@ -157,7 +150,7 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		 * @return
 		 * @throws XMLStreamException
 		 */
-		public boolean forwardToNextSpectrum() throws XMLStreamException {
+		public boolean moveToNextSpectrum() throws XMLStreamException {
 			ReferenceableParamGroup currGroup = null;
 			
 			while(this.xr.hasNext()){
@@ -191,12 +184,12 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 			FromXMLStreamBuilder<T> consumer = MzMLStAXParser.this.factory.create(MzMLStAXParser.this.xml.toString(), 
 					this.xr);
 			try {
-				while(this.xr.hasNext()){
+				while(this.xr.hasNext()) {
 					this.xr.next();
 				
 					if(this.xr.getEventType() == XMLStreamConstants.END_ELEMENT 
 							&& this.xr.getLocalName().equals("spectrum")){
-						this.forwardToNextSpectrum();
+						this.moveToNextSpectrum();
 						return consumer.build();
 					}
 					
@@ -212,7 +205,6 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 								consumer.accept(refXr);
 							}
 						}
-						
 						
 					} else {
 						consumer.accept(this.xr);
@@ -259,13 +251,10 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		// 1) find indexedmzML
 		try(InputStream is = Files.newInputStream(this.xml, StandardOpenOption.READ)) {
 			XMLStreamReader xr = xmlFac.createFilteredReader(xmlFac.createXMLStreamReader(is), new StartElementFilter());
-			switch (xr.getLocalName()) {
-				case "indexedmzML":
-					break;
-				case "mzML":
-					throw new XMLStreamException("mzML file with no indexing");
-				default:
-					throw new XMLStreamException("No indexedmzML tag found.");
+			if (xr.getLocalName().equals("mzML")) {
+				throw new XMLStreamException("mzML file with no indexing");
+			} else if(!xr.getLocalName().equals("indexedmzML")){
+				throw new XMLStreamException("No indexedmzML tag found.");
 			}
 			
 		} catch (IOException e) {
@@ -317,40 +306,32 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		InputStream is = Channels.newInputStream(this.seekable);
 		xr = xmlFac.createXMLStreamReader(is);
 		hasIndexList = false;
-		xmlPass : while (xr.hasNext()) {
+		while (xr.hasNext()) {
 			xr.next();
 			
 			if(indexer != null) {
 				indexer.accept(xr);
 			}
-			
-			eventPass : switch (xr.getEventType()) {
-				case XMLStreamConstants.START_ELEMENT:
-					switch (xr.getLocalName()) {
-						case "indexList":
-							hasIndexList = true;
-							break eventPass;
-						case "index":
-							indexer = new SpectrumIndexer(xr);
-							break eventPass;
-					}
+	
+			if(xr.getEventType() == XMLStreamConstants.START_ELEMENT) {
+				if(xr.getLocalName().equals("indexList")){
+					hasIndexList = true;
+				} else if(xr.getLocalName().equals("index")){
+					indexer = new SpectrumIndexer(xr);
+				}
+			} else if(xr.getEventType() == XMLStreamConstants.END_ELEMENT) {
+				if(xr.getLocalName().equals("indexList")){
+					hasIndexList = false;
 					break;
-				case XMLStreamConstants.END_ELEMENT:
-					switch (xr.getLocalName()) {
-						case "indexList":
-							hasIndexList = false;
-							break xmlPass;
-						case "index":
-							if(indexer.getName().equals("spectrum")) {
-								this.spectrumOffsets = indexer;
-							}
-							indexer = null;	
-							break eventPass;
+				} else if(xr.getLocalName().equals("index")){
+					if(indexer.getName().equals("spectrum")) {
+						this.spectrumOffsets = indexer;
 					}
-					break;
-			}
+					indexer = null;
+				}
+			}			
 		}
-		
+			
 		// 4) sets the scan time offsets available
 		if(indexScanTimes && this.spectrumOffsets != null){
 			try {
@@ -377,19 +358,16 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 					spectrumBuilder.accept(xr);
 				}
 
-				switch (xr.getEventType()) {
-					case XMLStreamReader.START_ELEMENT:
-						if(xr.getLocalName().equals("spectrum")) {
-							spectrumBuilder = this.factory.create(this.xml.toString(), xr);
-						} else if( xr.getLocalName().equals("referenceableParamGroupRef")) {
-							LOGGER.log(Level.WARN, "Random access to spectra will not parse referenceable params");
-						}
-						break;
-					case XMLStreamReader.END_ELEMENT:
-						if(xr.getLocalName().equals("spectrum")) {
-							return spectrumBuilder.build();
-						}
-						break;
+				if(xr.getEventType() == XMLStreamReader.START_ELEMENT){
+					if(xr.getLocalName().equals("spectrum")) {
+						spectrumBuilder = this.factory.create(this.xml.toString(), xr);
+					} else if( xr.getLocalName().equals("referenceableParamGroupRef")) {
+						LOGGER.log(Level.WARN, "Random access to spectra will not parse referenceable params");
+					}
+				} else if(xr.getEventType() == XMLStreamReader.END_ELEMENT) {
+					if(xr.getLocalName().equals("spectrum")) {
+						return spectrumBuilder.build();
+					}					
 				}
 			}
 		} catch (XMLStreamException | FactoryConfigurationError e) {
@@ -453,19 +431,46 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		}
 		
 		List<T> spectra = new ArrayList<T>();
-		for(Long offset : this.spectrumOffsets.getScanTimesToOffsets().subMap(low, true, high, true).values()){
+		for(Map.Entry<Double, Long> offset : this.spectrumOffsets.getScanTimesToOffsets().subMap(low, true, high, true).entrySet()){
 			try {
-				this.seekable = this.seekable.position(offset);
+				this.seekable = this.seekable.position(offset.getValue());
 			} catch (IOException e) {
 				LOGGER.log(Level.ERROR, e.toString());
 				return null;
 			} catch (NullPointerException e1 ) {
-				LOGGER.log(Level.ERROR, "Scan times was not set or no index was set for seekable file. " + e1.toString());
+				LOGGER.log(Level.ERROR, "Scan times was not set or no index was set for seekable file. " + e1.getMessage());
 				return null;
 			}
 			spectra.add(this.getNextSpectrumFromSeekable());	
 		}
 		return spectra;
+	}
+	
+	/**
+	 * Gets a list of spectra within a scanTime range using random access. 
+	 *  Assumes offsets are sorted
+	 * 
+	 * @param low scan time inclusive
+	 * @param high scan time inclusive
+	 * @throws IllegalStateException if no scan time index was parsed by the constructor
+	 * @return list of spectrum indices
+	 */
+	public List<Integer> getSpectrumIndicesByScanTimeRange(double low, double high) throws IllegalStateException {
+		if(this.spectrumOffsets.getScanTimesToOffsets() == null){
+			throw new IllegalStateException("No scan time index was set. Cannot random access by scan time range");			
+		}
+
+		List<Integer> indices = new ArrayList<Integer>();
+		
+		for(Map.Entry<Double, Long> offset : this.spectrumOffsets.getScanTimesToOffsets().subMap(low, true, high, true).entrySet()){
+			int i = Collections.binarySearch(this.spectrumOffsets.getOffsets(), offset.getValue());
+			if(i < 0) {
+				throw new IllegalStateException("Scan time offset was not found in the index list!");
+			}
+			indices.add(i);	
+		}
+		
+		return indices;
 	}
 	
 	/** 

@@ -26,6 +26,9 @@ import uk.ac.ebi.jmzml.model.mzml.CVParam;
 import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshaller;
 import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshallerException;
 
+/**
+ * Benchmarks mzml parser against jmzml parser.  
+ */
 public class Benchmark {
 	
 	public static class Row {
@@ -95,7 +98,7 @@ public class Benchmark {
 	}
 	
 	public static void main( String[] args ) throws MalformedURLException {
-    	CommandLineParser clParser = new DefaultParser();		
+		CommandLineParser clParser = new DefaultParser();		
 		Options opts = new Options();
 		opts.addOption("m", "mzml", true, "mzml file");
 		opts.addOption("p", "parser", true, "type of parser to use choices are j, stax, stax-h. (default is j)");

@@ -10,15 +10,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.digitalproteomics.oss.parsers.mzml.BinaryDataArray;
-import com.digitalproteomics.oss.parsers.mzml.MzMLStAXParser;
+import com.digitalproteomics.oss.parsers.mzml.model.Peak;
 import com.digitalproteomics.oss.parsers.mzml.model.Spectrum;
 import com.digitalproteomics.oss.parsers.mzml.model.SpectrumHeader;
-import com.digitalproteomics.oss.parsers.mzml.model.Spectrum.Peak;
 
 /**
  * Collates binary array data for constructing a spectrum 
  */
-public class XMLSpectrumBuilder implements MzMLStAXParser.FromXMLStreamBuilder<Spectrum>{
+public class XMLSpectrumBuilder implements FromXMLStreamBuilder<Spectrum>{
 	final static Logger LOGGER = LogManager.getLogger(XMLSpectrumBuilder.class);
 	
 	/**
@@ -42,45 +41,44 @@ public class XMLSpectrumBuilder implements MzMLStAXParser.FromXMLStreamBuilder<S
 	public void accept(XMLStreamReader xr) {
 		this.headerBuilder.accept(xr);
 		
-		switch(xr.getEventType()){
-			case XMLStreamConstants.START_ELEMENT:
-				switch (xr.getLocalName()) {
-					case "binaryDataArrayList":
-						this.data = new ArrayList<BinaryDataArray>(Integer.valueOf(xr.getAttributeValue(null, "count")));
-						return;
-					case "binaryDataArray":
-						this.currData = new BinaryDataArray();
-						this.currData.setEncodedLength(Integer.valueOf(xr.getAttributeValue(null, "encodedLength")));
-						return;
-					case "cvParam":
-						if(this.currData != null){
-							this.currData.setMemberByAccession(xr.getAttributeValue(null, "accession"));		
-						}
-						return;
-					case "binary":
-						if(this.currData != null){
-							this.inBinaryNesting = true;
-						}
-						return;
-				}
-				return;
-			case XMLStreamConstants.CHARACTERS:
-				if(this.inBinaryNesting){
-					this.currData.appendToEncodedData(xr.getText());
-				}
-				return;
-			case XMLStreamConstants.END_ELEMENT:
-				switch (xr.getLocalName()) {
-					case "binaryDataArray":
-						this.data.add(this.currData);
-						this.currData = null;
-						return;
-					case "binary":
-						this.inBinaryNesting = false;
-						return;
-				}
-				return;
-		}	
+		if(xr.getEventType() == XMLStreamConstants.START_ELEMENT) {
+			if(xr.getLocalName().equals("binaryDataArrayList")){
+
+				this.data = new ArrayList<BinaryDataArray>(Integer.valueOf(xr.getAttributeValue(null, "count")));
+				
+			} else if(xr.getLocalName().equals("binaryDataArray")){
+				
+				this.currData = new BinaryDataArray();
+				this.currData.setEncodedLength(Integer.valueOf(xr.getAttributeValue(null, "encodedLength")));
+				
+			} else if(xr.getLocalName().equals("cvParam") 
+					&& this.currData != null) {
+				
+				this.currData.setMemberByAccession(xr.getAttributeValue(null, "accession"));
+				
+			} else if(xr.getLocalName().equals("binary")
+					&& this.currData != null){
+				
+				this.inBinaryNesting = true;
+				
+			}
+		} else if(xr.getEventType() == XMLStreamConstants.CHARACTERS 
+				&& this.inBinaryNesting){
+			
+			this.currData.appendToEncodedData(xr.getText());
+			
+		} else if(xr.getEventType() == XMLStreamConstants.END_ELEMENT){
+			if(xr.getLocalName().equals("binaryDataArray")){
+				
+				this.data.add(this.currData);
+				this.currData = null;
+				
+			} else if(xr.getLocalName().equals("binary")) {
+				
+				this.inBinaryNesting = false;
+				
+			}
+		}
 	}
 	
 	/** 

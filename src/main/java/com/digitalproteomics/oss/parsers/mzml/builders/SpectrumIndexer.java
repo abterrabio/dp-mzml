@@ -13,7 +13,6 @@ import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
 
 import com.digitalproteomics.oss.parsers.mzml.MzMLStAXParser;
-import com.digitalproteomics.oss.parsers.mzml.MzMLStAXParser.FromXMLStreamBuilder;
 
 /**
  * A class to map spectrum references to byte offsets within an mzml file. The class parses xml events of 
@@ -37,25 +36,24 @@ public class SpectrumIndexer implements FromXMLStreamBuilder<SpectrumIndexer> {
 	
 	@Override
 	public void accept(XMLStreamReader xr) {
-		switch(xr.getEventType()) {
-			case XMLStreamConstants.START_ELEMENT:
-				if(xr.getLocalName().equals("offset")) {
-					this.currId = xr.getAttributeValue(null, "idRef");
-				}
-				break;
-			case XMLStreamConstants.CHARACTERS:
-				if(this.currId != null) {
-					this.currOffset = Long.valueOf(xr.getText());
-				}
-				break;
-			case XMLStreamConstants.END_ELEMENT:
-				if(xr.getLocalName().equals("offset")) {
-					this.idToOffsets.put(this.currId, this.currOffset);
-					this.offsets.add(this.currOffset);
-					this.currId = null;
-					this.currOffset = -1;
-				}
-				break;
+		if(xr.getEventType() == XMLStreamConstants.START_ELEMENT
+				&& xr.getLocalName().equals("offset")) {
+			
+			this.currId = xr.getAttributeValue(null, "idRef");
+			
+		} else if(xr.getEventType() == XMLStreamConstants.CHARACTERS
+				&& this.currId != null){
+			
+			this.currOffset = Long.valueOf(xr.getText());
+			
+		} else if(xr.getEventType() == XMLStreamConstants.END_ELEMENT
+				&& xr.getLocalName().equals("offset")){
+			
+			this.idToOffsets.put(this.currId, this.currOffset);
+			this.offsets.add(this.currOffset);
+			this.currId = null;
+			this.currOffset = -1;
+			
 		}
 	}
 	
@@ -87,7 +85,7 @@ public class SpectrumIndexer implements FromXMLStreamBuilder<SpectrumIndexer> {
 	/**
 	 * Collates ScanTime and Id information by consuming spectrum xml elements. 
 	 */
-	private class XMLSpectrumScanTimeBuilder implements MzMLStAXParser.FromXMLStreamBuilder<RefIdAndScanTime> {
+	private class XMLSpectrumScanTimeBuilder implements FromXMLStreamBuilder<RefIdAndScanTime> {
 
 		protected RefIdAndScanTime header;
 
@@ -105,7 +103,6 @@ public class SpectrumIndexer implements FromXMLStreamBuilder<SpectrumIndexer> {
 					? 60.0 
 					: 1.0;
 				this.header.setRT(norm * Double.valueOf(xr.getAttributeValue(null, "value")));
-								
 			}
 		}
 
