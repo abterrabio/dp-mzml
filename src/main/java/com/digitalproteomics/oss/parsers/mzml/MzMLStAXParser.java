@@ -479,6 +479,7 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		
 		for(Map.Entry<Double, Long> offset : this.spectrumOffsets.getScanTimesToOffsets().subMap(low, true, high, true).entrySet()){
 			int i = Collections.binarySearch(this.spectrumOffsets.getOffsets(), offset.getValue());
+			
 			if(i < 0) {
 				throw new IllegalStateException("Scan time offset was not found in the index list!");
 			}

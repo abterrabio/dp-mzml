@@ -27,6 +27,10 @@ import java.util.TreeMap;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.digitalproteomics.oss.parsers.mzml.MzMLStAXParser;
 
 /**
@@ -42,6 +46,8 @@ public class SpectrumIndexer implements FromXMLStreamBuilder<SpectrumIndexer> {
 	
 	private String currId;
 	private long currOffset;
+	
+	final static Logger LOGGER = LogManager.getLogger(SpectrumIndexer.class);
 	
 	public SpectrumIndexer(XMLStreamReader xr) {
 		this.name = xr.getAttributeValue(null, "name");
@@ -130,6 +136,8 @@ public class SpectrumIndexer implements FromXMLStreamBuilder<SpectrumIndexer> {
 	/** 
 	 * Sets offsets for start scan times by iterating over all spectrum xml elements.
 	 * 
+	 * Only scan times that match an index will be recorded!
+	 * 
 	 * @throws IOException 
 	 **/
 	public void setScanTimeToOffsets(Path xml) throws IOException{
@@ -141,7 +149,13 @@ public class SpectrumIndexer implements FromXMLStreamBuilder<SpectrumIndexer> {
 				false);
 		
 		for(RefIdAndScanTime r : parser){
-			this.scanTimeToOffsets.put(r.getScanTime(), r.getOffset());
+			if(r.getOffset() != null){
+				this.scanTimeToOffsets.put(r.getScanTime(), r.getOffset());	
+			} else {
+				LOGGER.log(Level.WARN, "IndexList is not complete. Scan start time " 
+						+ r.getScanTime() 
+						+ " was not found, but no matching reference id in index.");
+			}
 		}
 		
 		parser.close();
