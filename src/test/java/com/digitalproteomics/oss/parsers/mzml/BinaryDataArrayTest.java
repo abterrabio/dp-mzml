@@ -21,8 +21,6 @@ import org.junit.Test;
 import com.digitalproteomics.oss.parsers.mzml.BinaryDataArray;
 import com.digitalproteomics.oss.parsers.mzml.builders.XMLSpectrumBuilder;
 
-import uk.ac.ebi.jmzml.xml.io.MzMLUnmarshallerException;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
@@ -119,7 +117,7 @@ public class BinaryDataArrayTest extends TestCase {
     }
 
     @Test
-    public void testUnmarshallingUncompressed64Float() throws MzMLUnmarshallerException, UnsupportedEncodingException {
+    public void testUnmarshallingUncompressed64Float() throws UnsupportedEncodingException {
         // find the test XML file
         URL url = this.getClass().getClassLoader().getResource("MzMLFile_7_uncompressed.mzML");
 
@@ -128,7 +126,7 @@ public class BinaryDataArrayTest extends TestCase {
     }
 
     @Test
-    public void testUnmarshallingCompressed64Float() throws MzMLUnmarshallerException, UnsupportedEncodingException {
+    public void testUnmarshallingCompressed64Float() throws UnsupportedEncodingException {
         // find the test XML file
         URL url = this.getClass().getClassLoader().getResource("MzMLFile_7_compressed.mzML");
 
@@ -137,7 +135,7 @@ public class BinaryDataArrayTest extends TestCase {
     }
 
     @Test
-    public void testUnmarshallingUncompressed32Float() throws MzMLUnmarshallerException, UnsupportedEncodingException {
+    public void testUnmarshallingUncompressed32Float() throws UnsupportedEncodingException {
         // find the test XML file
         URL url = this.getClass().getClassLoader().getResource("MzMLFile_7_uncompressed.mzML");
 
@@ -146,7 +144,7 @@ public class BinaryDataArrayTest extends TestCase {
     }
 
     @Test
-    public void testUnmarshallingCompressed32Float() throws MzMLUnmarshallerException, UnsupportedEncodingException {
+    public void testUnmarshallingCompressed32Float() throws UnsupportedEncodingException {
         // find the test XML file
         URL url = this.getClass().getClassLoader().getResource("MzMLFile_7_compressed.mzML");
 
