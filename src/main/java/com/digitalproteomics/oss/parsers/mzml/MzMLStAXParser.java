@@ -282,8 +282,13 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		boolean hasIndexList = false;
 		long offsetFromStart = 0;
 		
-		ByteBuffer bb = ByteBuffer.allocate(4096);
+		int patternLength = 64;
+		int bbRead = 16384; 
+		ByteBuffer bb = ByteBuffer.allocate(bbRead + patternLength);
+		bb.limit(bbRead + patternLength);
+		ByteBuffer swap = ByteBuffer.allocate(patternLength);
 		Pattern indexListTag = Pattern.compile("<indexList[ >]");
+		CharSequence seq;
 		Matcher indexListFind;
 		
 		endFilePass : for(long offsetFromEnd = 1024; offsetFromEnd <= MzMLStAXParser.MAX_MEGABYTE_FROM_END * (1024 * 1024); offsetFromEnd = offsetFromEnd << 1 ) {
@@ -292,19 +297,25 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 				offsetFromStart = Math.max(0, this.seekable.size() - offsetFromEnd);
 				
 				this.seekable = this.seekable.position(offsetFromStart);
+				bb.position(patternLength);
 				while(this.seekable.read(bb) > 0 ){
 					bb.flip();
 					
-					indexListFind = indexListTag.matcher(Charset.forName("UTF-8").decode(bb));
+					seq = Charset.forName("UTF-8").decode(bb);
+					swap.rewind();
+					swap.put(bb.array(), seq.length() - patternLength, patternLength);
+					swap.flip();
+					indexListFind = indexListTag.matcher(seq);
 					if(indexListFind.find()){
-						offsetFromStart += indexListFind.start();
+						offsetFromStart += (indexListFind.start() - patternLength);
 						hasIndexList = true;
 						this.seekable = this.seekable.position(offsetFromStart);
 						break endFilePass;
 					}
 					
-					offsetFromStart += bb.limit();
+					offsetFromStart += bbRead;
 					bb.rewind();
+					bb.put(swap);
 				}
 			} catch (IOException e){
 				LOGGER.log(Level.ERROR, e.toString());
