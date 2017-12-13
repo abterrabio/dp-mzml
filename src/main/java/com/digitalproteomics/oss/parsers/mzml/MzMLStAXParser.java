@@ -285,59 +285,61 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		
 		int patternLength = 64;
 		int bbRead = 16384; 
-		ByteBuffer bb = ByteBuffer.allocate(bbRead + patternLength);
-		ByteBuffer swap = ByteBuffer.allocate(patternLength);
+		byte[] byteArray = new byte[bbRead + patternLength];
+		ByteBuffer bb = ByteBuffer.wrap(byteArray);
 		Pattern indexListTag = Pattern.compile("<indexList[ >]");
 		CharSequence seq;
 		Matcher indexListFind;
+		int bytesRead;
 		CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
-		
+
 		endFilePass : for(long offsetFromEnd = 1024; offsetFromEnd <= MzMLStAXParser.MAX_MEGABYTE_FROM_END * (1024 * 1024); offsetFromEnd = offsetFromEnd << 1 ) {
 			// finds first "<indexList" character sequence			
 			try {
 				offsetFromStart = Math.max(0, this.seekable.size() - offsetFromEnd);
 				
 				this.seekable = this.seekable.position(offsetFromStart);
-				bb.position(patternLength);
-				System.out.println("P1:" + bb.position());
-				
-				while(this.seekable.read(bb) > 0 ){
-					System.out.println("P2:" + bb.position());
+				bytesRead = 0;
+				bb.clear();
+				while (bytesRead > -1) {
+					do {
+						bytesRead = this.seekable.read(bb);
+					} while( bb.hasRemaining() && bytesRead > -1);
+					System.out.println("PreFlip:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());					
 					bb.flip();
-					
+					System.out.println("PostFlip:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());
 					seq = decoder.decode(bb);
 					System.out.println("Full:" + seq.subSequence(0, 1024));
-					swap.rewind();
-					swap.put(bb.array(), seq.length() - patternLength, patternLength);
-					swap.flip();
-					System.out.println("Swap:" + decoder.decode(swap).subSequence(0, patternLength));
-					swap.flip();
-					
+					System.out.println("Length of bb:" + seq.length() + " " + bytesRead);
+					System.out.println("PostFlipDecode:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());
 					indexListFind = indexListTag.matcher(seq);
 					if(indexListFind.find()){
 						System.out.println("P3:" + indexListFind.start() + " " + seq.subSequence(indexListFind.start(), indexListFind.start()+20));
 						offsetFromStart += indexListFind.start();
-						offsetFromStart -= patternLength;
 						hasIndexList = true;
 						this.seekable = this.seekable.position(offsetFromStart);
-						bb.rewind();
-						this.seekable.read(bb);
-						bb.flip();
-						System.out.println("Index:" + decoder.decode(bb).subSequence(0, 250));
+						ByteBuffer bb2 = ByteBuffer.allocate(1024);
+						this.seekable.read(bb2);
+						bb2.flip();
+						System.out.println("Index:" + decoder.decode(bb2).subSequence(0, 250));
 						this.seekable = this.seekable.position(offsetFromStart);
 						
 						break endFilePass;
 					}
-					
 					offsetFromStart += bbRead;
-					bb.rewind();
-					bb.put(swap);
+					
+					if(bytesRead > -1) {
+						bb.position(bbRead);
+						bb.compact();    // In case of partial write
+						System.out.println("P4:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());
+					}
 				}
+				
 			} catch (IOException e){
 				LOGGER.log(Level.ERROR, e.toString());
 				return;	
 			}
-		}
+		} 
 		
 		if(!hasIndexList) {
 			throw new XMLStreamException("Could not find indexList starting at the end of file.");
