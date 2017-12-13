@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -285,11 +286,11 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		int patternLength = 64;
 		int bbRead = 16384; 
 		ByteBuffer bb = ByteBuffer.allocate(bbRead + patternLength);
-		bb.limit(bbRead + patternLength);
 		ByteBuffer swap = ByteBuffer.allocate(patternLength);
 		Pattern indexListTag = Pattern.compile("<indexList[ >]");
 		CharSequence seq;
 		Matcher indexListFind;
+		CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
 		
 		endFilePass : for(long offsetFromEnd = 1024; offsetFromEnd <= MzMLStAXParser.MAX_MEGABYTE_FROM_END * (1024 * 1024); offsetFromEnd = offsetFromEnd << 1 ) {
 			// finds first "<indexList" character sequence			
@@ -298,18 +299,33 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 				
 				this.seekable = this.seekable.position(offsetFromStart);
 				bb.position(patternLength);
+				System.out.println("P1:" + bb.position());
+				
 				while(this.seekable.read(bb) > 0 ){
+					System.out.println("P2:" + bb.position());
 					bb.flip();
 					
-					seq = Charset.forName("UTF-8").decode(bb);
+					seq = decoder.decode(bb);
+					System.out.println("Full:" + seq.subSequence(0, 1024));
 					swap.rewind();
 					swap.put(bb.array(), seq.length() - patternLength, patternLength);
 					swap.flip();
+					System.out.println("Swap:" + decoder.decode(swap).subSequence(0, patternLength));
+					swap.flip();
+					
 					indexListFind = indexListTag.matcher(seq);
 					if(indexListFind.find()){
-						offsetFromStart += (indexListFind.start() - patternLength);
+						System.out.println("P3:" + indexListFind.start() + " " + seq.subSequence(indexListFind.start(), indexListFind.start()+20));
+						offsetFromStart += indexListFind.start();
+						offsetFromStart -= patternLength;
 						hasIndexList = true;
 						this.seekable = this.seekable.position(offsetFromStart);
+						bb.rewind();
+						this.seekable.read(bb);
+						bb.flip();
+						System.out.println("Index:" + decoder.decode(bb).subSequence(0, 250));
+						this.seekable = this.seekable.position(offsetFromStart);
+						
 						break endFilePass;
 					}
 					
