@@ -283,14 +283,12 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		boolean hasIndexList = false;
 		long offsetFromStart = 0;
 		
-		int patternLength = 64;
 		int bbRead = 16384; 
-		byte[] byteArray = new byte[bbRead + patternLength];
+		byte[] byteArray = new byte[bbRead + 64];
 		ByteBuffer bb = ByteBuffer.wrap(byteArray);
 		Pattern indexListTag = Pattern.compile("<indexList[ >]");
-		CharSequence seq;
+		
 		Matcher indexListFind;
-		int bytesRead;
 		CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
 
 		endFilePass : for(long offsetFromEnd = 1024; offsetFromEnd <= MzMLStAXParser.MAX_MEGABYTE_FROM_END * (1024 * 1024); offsetFromEnd = offsetFromEnd << 1 ) {
@@ -299,39 +297,32 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 				offsetFromStart = Math.max(0, this.seekable.size() - offsetFromEnd);
 				
 				this.seekable = this.seekable.position(offsetFromStart);
-				bytesRead = 0;
+				int bytesRead = 0;
+				CharSequence seq;
 				bb.clear();
 				while (bytesRead > -1) {
+					// fills the buffer
 					do {
 						bytesRead = this.seekable.read(bb);
 					} while( bb.hasRemaining() && bytesRead > -1);
-					System.out.println("PreFlip:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());					
 					bb.flip();
-					System.out.println("PostFlip:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());
+					
+					// converts to a char buffer to pattern match
 					seq = decoder.decode(bb);
-					System.out.println("Full:" + seq.subSequence(0, 1024));
-					System.out.println("Length of bb:" + seq.length() + " " + bytesRead);
-					System.out.println("PostFlipDecode:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());
 					indexListFind = indexListTag.matcher(seq);
 					if(indexListFind.find()){
-						System.out.println("P3:" + indexListFind.start() + " " + seq.subSequence(indexListFind.start(), indexListFind.start()+20));
 						offsetFromStart += indexListFind.start();
 						hasIndexList = true;
-						this.seekable = this.seekable.position(offsetFromStart);
-						ByteBuffer bb2 = ByteBuffer.allocate(1024);
-						this.seekable.read(bb2);
-						bb2.flip();
-						System.out.println("Index:" + decoder.decode(bb2).subSequence(0, 250));
-						this.seekable = this.seekable.position(offsetFromStart);
-						
+						this.seekable = this.seekable.position(offsetFromStart);	
 						break endFilePass;
 					}
+					
+					// shifts only by bbRead to find again on the overlap
 					offsetFromStart += bbRead;
 					
 					if(bytesRead > -1) {
 						bb.position(bbRead);
-						bb.compact();    // In case of partial write
-						System.out.println("P4:" + bb.position() + " " + bb.limit() + " " + bb.capacity() + " " + bb.remaining());
+						bb.compact(); // compacts upto overlap
 					}
 				}
 				
