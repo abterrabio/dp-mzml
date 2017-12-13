@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -282,35 +283,54 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 		boolean hasIndexList = false;
 		long offsetFromStart = 0;
 		
-		ByteBuffer bb = ByteBuffer.allocate(4096);
+		int bbRead = 16384; 
+		byte[] byteArray = new byte[bbRead + 64];
+		ByteBuffer bb = ByteBuffer.wrap(byteArray);
 		Pattern indexListTag = Pattern.compile("<indexList[ >]");
-		Matcher indexListFind;
 		
+		Matcher indexListFind;
+		CharsetDecoder decoder = Charset.forName("UTF-8").newDecoder();
+
 		endFilePass : for(long offsetFromEnd = 1024; offsetFromEnd <= MzMLStAXParser.MAX_MEGABYTE_FROM_END * (1024 * 1024); offsetFromEnd = offsetFromEnd << 1 ) {
 			// finds first "<indexList" character sequence			
 			try {
 				offsetFromStart = Math.max(0, this.seekable.size() - offsetFromEnd);
 				
 				this.seekable = this.seekable.position(offsetFromStart);
-				while(this.seekable.read(bb) > 0 ){
+				int bytesRead = 0;
+				CharSequence seq;
+				bb.clear();
+				while (bytesRead > -1) {
+					// fills the buffer
+					do {
+						bytesRead = this.seekable.read(bb);
+					} while( bb.hasRemaining() && bytesRead > -1);
 					bb.flip();
 					
-					indexListFind = indexListTag.matcher(Charset.forName("UTF-8").decode(bb));
+					// converts to a char buffer to pattern match
+					seq = decoder.decode(bb);
+					indexListFind = indexListTag.matcher(seq);
 					if(indexListFind.find()){
 						offsetFromStart += indexListFind.start();
 						hasIndexList = true;
-						this.seekable = this.seekable.position(offsetFromStart);
+						this.seekable = this.seekable.position(offsetFromStart);	
 						break endFilePass;
 					}
 					
-					offsetFromStart += bb.limit();
-					bb.rewind();
+					// shifts only by bbRead to find again on the overlap
+					offsetFromStart += bbRead;
+					
+					if(bytesRead > -1) {
+						bb.position(bbRead);
+						bb.compact(); // compacts upto overlap
+					}
 				}
+				
 			} catch (IOException e){
 				LOGGER.log(Level.ERROR, e.toString());
 				return;	
 			}
-		}
+		} 
 		
 		if(!hasIndexList) {
 			throw new XMLStreamException("Could not find indexList starting at the end of file.");
