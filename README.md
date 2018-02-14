@@ -1,5 +1,7 @@
 # A parse what you need mzML parser library
 
+[![Build Status](https://travis-ci.org/digitalproteomics/dp-mzml.svg?branch=master)](https://travis-ci.org/digitalproteomics/dp-mzml)
+
  dp-mzml is a java library for quickly parsing spectrum data from an mzML file via
   sequential iteration or random access. 
   
