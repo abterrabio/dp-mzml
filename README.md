@@ -76,6 +76,5 @@ To use this library, add the following to your pom.xml file.
  Apache License 2.0 
  
 
-Copyright 2017 Digital Proteomics, LLC
-
+Copyright 2019 [Digital Proteomics, LLC](https://www.digitalproteomics.com)
 
