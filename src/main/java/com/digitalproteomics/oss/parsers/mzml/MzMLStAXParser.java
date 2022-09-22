@@ -49,7 +49,7 @@ import com.digitalproteomics.oss.parsers.mzml.builders.ReferenceableParamGroup;
 import com.digitalproteomics.oss.parsers.mzml.builders.SpectrumIndexer;
 
 /**
- * A generic parser of an mzml file. The parser is an iterable over spectrum tags,
+ * A generic parser of a mzML file. The parser is an iterable over spectrum tags,
  * and can random access to a spectrum tag using the indexedMzML's index tags. 
  *
  * If random access by scan time ranges is needed, then parseIndex and indexScanTimes must be flagged.
@@ -70,7 +70,7 @@ public class MzMLStAXParser<T> implements Iterable<T>, Closeable {
 			boolean indexScanTimes) {
 		this.xml = xml;
 		this.factory = factory;
-		this.refParams = new HashMap<String, ReferenceableParamGroup>();
+		this.refParams = new HashMap<>();
 		
 		try {
 			if(parseIndex){
