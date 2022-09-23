@@ -1,11 +1,11 @@
 package com.digitalproteomics.oss.parsers.mzml;
 
-import com.digitalproteomics.oss.parsers.mzml.model.Chromatogram;
-import junit.framework.TestCase;
-
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+
+import com.digitalproteomics.oss.parsers.mzml.model.Chromatogram;
+import junit.framework.TestCase;
 
 public class MzMLChromatogramStAXParserTest extends TestCase {
 

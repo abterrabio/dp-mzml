@@ -19,16 +19,18 @@ public class Chromatogram {
      */
     double[] intensities;
 
+
+    /**
+     * Pressure values associated with time array.
+     */
+    double[] pressures;
+
     /**
      * Full constructor for storing chromatogram values.
      * @param id identifier of the chromatagram data
-     * @param times retention time in minutes
-     * @param intensities values associated with time array
      */
-    public Chromatogram(String id, double[] times, double[] intensities) {
+    public Chromatogram(String id) {
         this.id = id;
-        this.times = times;
-        this.intensities = intensities;
     }
 
     public String getId() {
@@ -53,5 +55,13 @@ public class Chromatogram {
 
     public void setIntensities(double[] intensities) {
         this.intensities = intensities;
+    }
+
+    public double[] getPressures() {
+        return pressures;
+    }
+
+    public void setPressures(double[] pressures) {
+        this.pressures = pressures;
     }
 }
