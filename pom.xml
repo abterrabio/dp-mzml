@@ -5,6 +5,7 @@
   <groupId>com.digitalproteomics.oss</groupId>
   <artifactId>dp-mzml</artifactId>
   <version>1.1.0-RELEASE</version>
+  <version>1.0.1</version>
   <packaging>jar</packaging>
 
   <name>dp-mzml</name>

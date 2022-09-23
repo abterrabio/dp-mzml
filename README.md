@@ -1,5 +1,7 @@
 # A parse what you need mzML parser library
 
+[![Build Status](https://travis-ci.org/digitalproteomics/dp-mzml.svg?branch=master)](https://travis-ci.org/digitalproteomics/dp-mzml)
+
  dp-mzml is a java library for quickly parsing spectrum data from an mzML file via
   sequential iteration or random access. 
   
@@ -66,7 +68,7 @@ To use this library, add the following to your pom.xml file.
 <dependency>
   <groupId>com.digitalproteomics</groupId>
   <artifactId>dp-mzml</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0-RELEASE</version>
 </dependency>
 ```
 
