@@ -68,7 +68,7 @@ To use this library, add the following to your pom.xml file.
 <dependency>
   <groupId>com.digitalproteomics</groupId>
   <artifactId>dp-mzml</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0-RELEASE</version>
 </dependency>
 ```
 

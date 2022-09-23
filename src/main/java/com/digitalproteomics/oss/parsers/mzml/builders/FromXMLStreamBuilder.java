@@ -27,4 +27,15 @@ import javax.xml.stream.XMLStreamReader;
 public interface FromXMLStreamBuilder<S> extends Consumer<XMLStreamReader> {
 	/** Constructs an instance of type T after consuming xml states **/
 	S build();
+
+	/**
+	 * Parses spectrum tags.
+	 */
+	default boolean buildsFromSpectrumTags() {
+		return true;
+	}
+
+	default boolean buildsFromChromatogramTags() {
+		return false;
+	}
 }

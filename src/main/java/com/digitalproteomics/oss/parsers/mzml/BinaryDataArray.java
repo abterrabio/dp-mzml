@@ -423,8 +423,12 @@ public class BinaryDataArray {
          * Defines the charges related to the m/z values of a spectrum.
          * PSI-MS ontology term "MS:1000516"
          */
-        CHARGE_ARRAY("MS:1000516"), 
-        
+        CHARGE_ARRAY("MS:1000516"),
+        /**
+         * Pressures related to the chromatography.
+         * PSI-MS ontology term "MS:1000821"
+         */
+        PRESSURE_ARRAY("MS:1000821"),
         /**
          * Used if no other DataType could be determined.
          * Possible reasons: other data encoded, other vocabulary terms used, data not present, ...
@@ -488,6 +492,7 @@ public class BinaryDataArray {
     	put(DataType.MZ_VALUES.getAccession(), DataType.MZ_VALUES);
     	put(DataType.TIME_ARRAY.getAccession(), DataType.TIME_ARRAY);
     	put(DataType.CHARGE_ARRAY.getAccession(), DataType.CHARGE_ARRAY);
+        put(DataType.PRESSURE_ARRAY.getAccession(), DataType.PRESSURE_ARRAY);
     }};
 
     /** raw array of data **/
